@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Emoji Panel — shown when user taps the emoji toolbar button.
+    Structure:
+      - Header row: category tabs + back button
+      - Grid of emoji (via GridView for performance)
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/emoji_panel"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/keyboard_background"
+    android:orientation="vertical"
+    android:minHeight="200dp">
+
+    <!-- Category Tab Row -->
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:scrollbars="none"
+        android:background="@color/toolbar_background"
+        android:fadingEdgeLength="16dp"
+        android:requiresFadingEdge="horizontal">
+
+        <LinearLayout
+            android:id="@+id/emoji_category_tabs"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:gravity="center_vertical">
+            <!-- Category tab buttons injected programmatically -->
+        </LinearLayout>
+    </HorizontalScrollView>
+
+    <!-- Emoji Grid -->
+    <GridView
+        android:id="@+id/emoji_grid"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:columnWidth="44dp"
+        android:gravity="center"
+        android:horizontalSpacing="2dp"
+        android:numColumns="auto_fit"
+        android:padding="4dp"
+        android:scrollbars="vertical"
+        android:stretchMode="columnWidth"
+        android:verticalSpacing="2dp" />
+
+    <!-- Back to keyboard button -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:background="@color/toolbar_background"
+        android:gravity="start|center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp">
+
+        <Button
+            android:id="@+id/emoji_back_btn"
+            style="@style/KeyButtonWide"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:text="ABC"
+            android:textSize="12sp" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Emoji"
+            android:textColor="@color/toolbar_text"
+            android:textSize="12sp"
+            android:alpha="0.6" />
+
+        <Space android:layout_width="8dp" android:layout_height="1dp" />
+    </LinearLayout>
+
+</LinearLayout>

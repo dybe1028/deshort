@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Emoji / smiley face icon -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M12,2C6.477,2 2,6.477 2,12s4.477,10 10,10 10,-4.477 10,-10S17.523,2 12,2z"
+        android:strokeColor="@color/toolbar_text"
+        android:strokeWidth="1.8" />
+    <path
+        android:fillColor="@color/toolbar_text"
+        android:pathData="M8.5,10.5m-1,0a1,1 0,1 1,2 0a1,1 0,1 1,-2 0" />
+    <path
+        android:fillColor="@color/toolbar_text"
+        android:pathData="M15.5,10.5m-1,0a1,1 0,1 1,2 0a1,1 0,1 1,-2 0" />
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M8,14.5c1,1.5 5,1.5 8,0"
+        android:strokeColor="@color/toolbar_text"
+        android:strokeLineCap="round"
+        android:strokeWidth="1.8" />
+</vector>

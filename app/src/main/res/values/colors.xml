@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ===== DARK THEME (default) ===== -->
+    <color name="dk_keyboard_bg">#18191F</color>
+    <color name="dk_key_letter_bg">#303137</color>
+    <color name="dk_key_letter_pressed">#484A52</color>
+    <color name="dk_key_letter_stroke">#1AFFFFFF</color>
+    <color name="dk_key_special_bg">#25262D</color>
+    <color name="dk_key_special_pressed">#383A42</color>
+    <color name="dk_key_special_stroke">#1AFFFFFF</color>
+    <color name="dk_key_space_bg">#303137</color>
+    <color name="dk_key_space_pressed">#484A52</color>
+    <color name="dk_key_text">#F4F4F5</color>
+    <color name="dk_key_text_special">#C0C2CC</color>
+    <color name="dk_key_text_space">#7B7E8A</color>
+    <color name="dk_key_ripple">#33FFFFFF</color>
+    <color name="dk_shift_active_bg">#9DB8FF</color>
+    <color name="dk_shift_active_pressed">#7A9EFF</color>
+    <color name="dk_shift_active_text">#18191F</color>
+    <color name="dk_toolbar_bg">#202127</color>
+    <color name="dk_toolbar_btn_bg">#303137</color>
+    <color name="dk_toolbar_btn_pressed">#484A52</color>
+    <color name="dk_toolbar_btn_active">#9DB8FF</color>
+    <color name="dk_toolbar_btn_active_text">#18191F</color>
+    <color name="dk_toolbar_text">#B0B3C0</color>
+    <color name="dk_accent">#9DB8FF</color>
+    <color name="dk_pill_bg">#303137</color>
+    <color name="dk_pill_pressed">#484A52</color>
+    <color name="dk_pill_text">#C0C2CC</color>
+
+    <!-- ===== LIGHT THEME ===== -->
+    <color name="lt_keyboard_bg">#F0F1F4</color>
+    <color name="lt_key_letter_bg">#FFFFFF</color>
+    <color name="lt_key_letter_pressed">#D8DCE6</color>
+    <color name="lt_key_letter_stroke">#22000000</color>
+    <color name="lt_key_special_bg">#DDE1E8</color>
+    <color name="lt_key_special_pressed">#BFC4CF</color>
+    <color name="lt_key_special_stroke">#22000000</color>
+    <color name="lt_key_space_bg">#FFFFFF</color>
+    <color name="lt_key_space_pressed">#D8DCE6</color>
+    <color name="lt_key_text">#202124</color>
+    <color name="lt_key_text_special">#3C4043</color>
+    <color name="lt_key_text_space">#70757A</color>
+    <color name="lt_key_ripple">#33000000</color>
+    <color name="lt_shift_active_bg">#526DA8</color>
+    <color name="lt_shift_active_pressed">#3B5690</color>
+    <color name="lt_shift_active_text">#FFFFFF</color>
+    <color name="lt_toolbar_bg">#E5E7EC</color>
+    <color name="lt_toolbar_btn_bg">#FFFFFF</color>
+    <color name="lt_toolbar_btn_pressed">#D0D3DC</color>
+    <color name="lt_toolbar_btn_active">#526DA8</color>
+    <color name="lt_toolbar_btn_active_text">#FFFFFF</color>
+    <color name="lt_toolbar_text">#5F6368</color>
+    <color name="lt_accent">#526DA8</color>
+    <color name="lt_pill_bg">#FFFFFF</color>
+    <color name="lt_pill_pressed">#D8DCE6</color>
+    <color name="lt_pill_text">#3C4043</color>
+
+    <!-- ===== Runtime aliases (default = dark) — reassigned programmatically ===== -->
+    <color name="keyboard_background">@color/dk_keyboard_bg</color>
+    <color name="key_letter_bg">@color/dk_key_letter_bg</color>
+    <color name="key_letter_pressed">@color/dk_key_letter_pressed</color>
+    <color name="key_letter_stroke">@color/dk_key_letter_stroke</color>
+    <color name="key_special_bg">@color/dk_key_special_bg</color>
+    <color name="key_special_pressed">@color/dk_key_special_pressed</color>
+    <color name="key_special_stroke">@color/dk_key_special_stroke</color>
+    <color name="key_space_bg">@color/dk_key_space_bg</color>
+    <color name="key_space_pressed">@color/dk_key_space_pressed</color>
+    <color name="key_text_color">@color/dk_key_text</color>
+    <color name="key_text_special">@color/dk_key_text_special</color>
+    <color name="key_text_space">@color/dk_key_text_space</color>
+    <color name="key_ripple">@color/dk_key_ripple</color>
+    <color name="key_shift_active_bg">@color/dk_shift_active_bg</color>
+    <color name="key_shift_active_pressed">@color/dk_shift_active_pressed</color>
+    <color name="toolbar_background">@color/dk_toolbar_bg</color>
+    <color name="toolbar_btn_bg">@color/dk_toolbar_btn_bg</color>
+    <color name="toolbar_btn_pressed">@color/dk_toolbar_btn_pressed</color>
+    <color name="toolbar_btn_active">@color/dk_toolbar_btn_active</color>
+    <color name="toolbar_text">@color/dk_toolbar_text</color>
+    <color name="clipboard_pill_bg">@color/dk_pill_bg</color>
+    <color name="clipboard_pill_text">@color/dk_pill_text</color>
+</resources>

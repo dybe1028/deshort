@@ -1,0 +1,28 @@
+<resources>
+    <string name="app_name">Deshort</string>
+    <string name="subtype_label">Tiếng Việt (Telex)</string>
+    <string name="subtype_vi">Tiếng Việt (Telex)</string>
+    <string name="subtype_en">English (US)</string>
+    <string name="ime_description">Deshort Keyboard</string>
+
+    <!-- Settings labels -->
+    <string name="settings_appearance">Giao diện</string>
+    <string name="settings_theme">Chế độ màu</string>
+    <string name="settings_theme_light">Sáng</string>
+    <string name="settings_theme_dark">Tối</string>
+    <string name="settings_theme_system">Theo hệ thống</string>
+    <string name="settings_theme_scheduled">Theo giờ</string>
+    <string name="settings_light_start">Giờ bắt đầu chế độ Sáng</string>
+    <string name="settings_dark_start">Giờ bắt đầu chế độ Tối</string>
+    <string name="settings_toolbar_visible">Hiện thanh công cụ</string>
+    <string name="settings_clipboard">Nhớ tạm</string>
+    <string name="settings_clipboard_preview">Hiện xem trước nhớ tạm</string>
+    <string name="settings_clear_clipboard">Xóa lịch sử nhớ tạm</string>
+    <string name="settings_keyboard">Bàn phím</string>
+    <string name="settings_auto_cap">Tự động viết hoa đầu câu</string>
+    <string name="settings_auto_cap_desc">Tự động viết hoa chữ cái đầu tiên và sau các dấu chấm, hỏi, than (., ?, !)</string>
+    <string name="settings_auto_switch">Tự về bảng chữ cái</string>
+    <string name="settings_auto_switch_desc">Tự động quay về bảng gõ chữ khi bấm phím Cách sau khi đã nhập ký tự đặc biệt</string>
+    <string name="settings_vibration">Rung khi nhấn phím</string>
+    <string name="settings_sound">Âm thanh khi nhấn phím</string>
+</resources>
