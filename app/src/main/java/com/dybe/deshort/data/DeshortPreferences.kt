@@ -140,6 +140,21 @@ class DeshortPreferences(context: Context) {
         prefs.edit().putString(KEY_CLIPBOARD_PINNED, arr.toString()).apply()
     }
 
+    /**
+     * Timestamp of the last clipboard shortcut event consumed (pasted) by the user.
+     * Stored as a raw timestamp only — never persists sensitive text.
+     */
+    var consumedClipTimestamp: Long
+        get() = prefs.getLong(KEY_CONSUMED_CLIP_TIMESTAMP, 0L)
+        set(value) = prefs.edit().putLong(KEY_CONSUMED_CLIP_TIMESTAMP, value).apply()
+
+    /**
+     * Content hash (Int) of the last consumed clipboard item for fallback comparison.
+     */
+    var consumedClipContentHash: Int
+        get() = prefs.getInt(KEY_CONSUMED_CLIP_CONTENT_HASH, 0)
+        set(value) = prefs.edit().putInt(KEY_CONSUMED_CLIP_CONTENT_HASH, value).apply()
+
     // -------------------------------------------------------------------------
     // Keyboard Feel
     // -------------------------------------------------------------------------
@@ -198,6 +213,8 @@ class DeshortPreferences(context: Context) {
         const val KEY_CLIPBOARD_PREVIEW = "pref_clipboard_preview"
         const val KEY_CLIPBOARD_HISTORY = "pref_clipboard_history"
         const val KEY_CLIPBOARD_PINNED = "pref_clipboard_pinned"
+        const val KEY_CONSUMED_CLIP_TIMESTAMP = "pref_consumed_clip_timestamp"
+        const val KEY_CONSUMED_CLIP_CONTENT_HASH = "pref_consumed_clip_content_hash"
         const val MAX_CLIPBOARD_ITEMS = 20
         const val MAX_PINNED_ITEMS = 10
 

@@ -63,6 +63,9 @@ class EmojiPanelController(
                 val emoji = emojis[position]
                 onEmojiSelected(emoji)
                 saveToRecent(emoji)
+                if (currentCategoryIndex == 0) {
+                    loadCategory(0)
+                }
             }
             return tv
         }
@@ -120,7 +123,9 @@ class EmojiPanelController(
                     (40 * dp).toInt(), ViewGroup.LayoutParams.MATCH_PARENT
                 ).also { it.marginEnd = (2 * dp).toInt() }
                 setPadding((4 * dp).toInt(), 0, (4 * dp).toInt(), 0)
-                setBackgroundResource(R.drawable.bg_toolbar_btn)
+                setBackgroundResource(
+                    if (index == currentCategoryIndex) R.drawable.bg_toolbar_btn_active else R.drawable.bg_toolbar_btn
+                )
                 isClickable = true
                 isFocusable = true
                 setOnClickListener { selectCategory(index) }

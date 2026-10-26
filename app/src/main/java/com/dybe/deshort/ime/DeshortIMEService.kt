@@ -17,6 +17,13 @@ import com.dybe.deshort.ime.toolbar.EmojiPanelController
 import com.dybe.deshort.input.TextCapitalizationHelper
 import com.dybe.deshort.input.telex.TelexEngine
 import com.dybe.deshort.input.telex.TelexSpaceBackspaceHandler
+import android.content.ClipDescription
+import android.net.Uri
+import android.util.Log
+import android.widget.Toast
+import androidx.core.view.inputmethod.EditorInfoCompat
+import androidx.core.view.inputmethod.InputConnectionCompat
+import androidx.core.view.inputmethod.InputContentInfoCompat
 import java.text.BreakIterator
 
 /**
@@ -97,13 +104,17 @@ class DeshortIMEService : InputMethodService() {
     // Controllers
     // -------------------------------------------------------------------------
 
-    private val themeManager by lazy { KeyboardThemeManager(this, prefs) }
+    private val themeManager: KeyboardThemeManager by lazy { KeyboardThemeManager(this, prefs) }
 
-    private val clipboardController by lazy {
+    private val clipboardController: ClipboardController by lazy {
         ClipboardController(
             context = this,
             prefs = prefs,
             onPasteText = { text -> pasteText(text) },
+            onPasteImage = { uri, desc -> commitImageContent(uri, desc) },
+            onSelectionDismissed = {
+                cursorSelectionController.deactivateSelectionMode()
+            },
             onPanelVisibilityChanged = { visible ->
                 if (visible) {
                     keyboardRootView?.findViewById<View>(R.id.qwerty_container)?.visibility = View.GONE
@@ -113,7 +124,7 @@ class DeshortIMEService : InputMethodService() {
         )
     }
 
-    private val cursorSelectionController by lazy {
+    private val cursorSelectionController: CursorSelectionController by lazy {
         CursorSelectionController(
             onSelectionModeChanged = { active ->
                 keyboardRootView?.let { themeManager.updateSelectionModeButton(it, active) }
@@ -125,7 +136,7 @@ class DeshortIMEService : InputMethodService() {
         )
     }
 
-    private val emojiController by lazy {
+    private val emojiController: EmojiPanelController by lazy {
         EmojiPanelController(
             context = this,
             prefs = prefs,
@@ -341,11 +352,47 @@ class DeshortIMEService : InputMethodService() {
     /**
      * Paste text at the current cursor position.
      * Commits any composing word first to avoid interference with TelexEngine.
+     * Returns true if paste succeeded, false otherwise.
      */
-    private fun pasteText(text: String) {
-        val ic = currentInputConnection ?: return
+    private fun pasteText(text: String): Boolean {
+        val ic = currentInputConnection ?: return false
         commitCurrentWord(ic)
-        ic.commitText(text, 1)
+        return ic.commitText(text, 1)
+    }
+
+    /**
+     * Insert image via commitContent() API.
+     * Validates target editor MIME type support, returns true if insertion succeeds.
+     */
+    private fun commitImageContent(uri: Uri, description: ClipDescription): Boolean {
+        val ic = currentInputConnection ?: return false
+        val ei = currentInputEditorInfo ?: return false
+
+        val contentMimeTypes = EditorInfoCompat.getContentMimeTypes(ei)
+        val matchingMime = contentMimeTypes.firstOrNull { mime -> description.hasMimeType(mime) }
+
+        if (matchingMime == null) {
+            Toast.makeText(this, "Ứng dụng này không hỗ trợ dán ảnh", Toast.LENGTH_SHORT).show()
+            return false
+        }
+
+        return try {
+            val inputContentInfo = InputContentInfoCompat(
+                uri,
+                ClipDescription(description.label, arrayOf(matchingMime)),
+                null
+            )
+            val flags = InputConnectionCompat.INPUT_CONTENT_GRANT_READ_URI_PERMISSION
+            val result = InputConnectionCompat.commitContent(ic, ei, inputContentInfo, flags, null)
+            if (!result) {
+                Toast.makeText(this, "Không thể dán ảnh vào trường này", Toast.LENGTH_SHORT).show()
+            }
+            result
+        } catch (e: Exception) {
+            Log.e("DeshortIMEService", "commitContent failed: ${e.message}", e)
+            Toast.makeText(this, "Không thể dán ảnh", Toast.LENGTH_SHORT).show()
+            false
+        }
     }
 
     /**
@@ -684,6 +731,7 @@ class DeshortIMEService : InputMethodService() {
         spaceBackspaceHandler.reset()
         mainHandler.removeCallbacksAndMessages(null)
         cursorSelectionController.onDestroy()
+        clipboardController.onDestroy()
         shiftButton = null
         modeButton = null
         letterButtons.clear()

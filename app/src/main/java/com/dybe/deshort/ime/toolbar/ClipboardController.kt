@@ -1,13 +1,18 @@
 package com.dybe.deshort.ime.toolbar
 
 import android.content.ClipData
+import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Context
+import android.graphics.Bitmap
+import android.net.Uri
 import android.os.Build
 import android.util.Log
+import android.util.Size
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -19,39 +24,64 @@ import com.dybe.deshort.data.DeshortPreferences
  *
  * Privacy policy:
  *  - Never collects clipboard data autonomously in the background.
- *  - Only saves text when [saveCurrentClipboardItem] is called explicitly
- *    (e.g. after the user taps the clipboard pill to paste, or the user copies via IME).
+ *  - Only saves text when explicitly copied via IME or when pasted through smart pill.
  *  - On Android 10+ the system allows reading clipboard only when the IME is focused.
- *    We attempt to read it opportunistically in [refreshPillFromSystemClipboard] but
- *    never store the result without user interaction.
- *  - Passwords and content flagged as sensitive are ignored via ClipDescription flags.
+ *    We read opportunistically for the pill preview and never store text without user action.
+ *  - Passwords and content flagged as IS_SENSITIVE are ignored.
+ *  - Never persists sensitive clipboard text to disk just for tracking consumed state.
  */
 class ClipboardController(
     private val context: Context,
     private val prefs: DeshortPreferences,
-    private val onPasteText: (String) -> Unit,
+    private val onPasteText: (String) -> Boolean,
+    private val onPasteImage: (Uri, ClipDescription) -> Boolean = { _, _ -> false },
+    private val onSelectionDismissed: (() -> Unit)? = null,
     private val onPanelVisibilityChanged: (Boolean) -> Unit
 ) {
 
     // -------------------------------------------------------------------------
-    // State
+    // Transient Shortcut State
     // -------------------------------------------------------------------------
 
-    /** Last text we read from the system clipboard (not saved to history) */
+    /** Active text read from system clipboard (not yet consumed) */
     private var systemClipPreview: String? = null
+
+    /** Active image URI read from system clipboard (not yet consumed) */
+    private var systemClipImageUri: Uri? = null
+
+    /** Active image description for rich content insertion */
+    private var systemClipImageDescription: ClipDescription? = null
+
+    /** Tiny thumbnail for image preview in pill (recycled when dismissed) */
+    private var systemClipImageThumbnail: Bitmap? = null
+
+    /** Timestamp of the currently displayed clip event */
+    private var activeClipTimestamp: Long = 0L
+
+    /** Hash of the currently displayed clip event */
+    private var activeClipHash: Int = 0
+
+    /** Sequence of the currently displayed clip event */
+    private var activeClipSequence: Long = 0L
 
     /** Current selection text (set externally when user selects text) */
     var currentSelectionText: String? = null
 
     // -------------------------------------------------------------------------
-    // Views (set after inflation)
+    // Views
     // -------------------------------------------------------------------------
 
     private var pillTextView: TextView? = null
+    private var pillImageView: ImageView? = null
     private var clipboardPanel: View? = null
     private var itemsContainer: LinearLayout? = null
     private var emptyLabel: TextView? = null
     private var scrollView: ScrollView? = null
+
+    private val clipListener = ClipboardManager.OnPrimaryClipChangedListener {
+        currentClipSequence++
+        refreshPillFromSystemClipboard()
+    }
 
     // -------------------------------------------------------------------------
     // Setup
@@ -59,6 +89,7 @@ class ClipboardController(
 
     fun bindViews(rootView: View) {
         pillTextView = rootView.findViewById(R.id.toolbar_pill_text)
+        pillImageView = rootView.findViewById(R.id.toolbar_pill_image)
         clipboardPanel = rootView.findViewById(R.id.clipboard_panel_container)
         itemsContainer = rootView.findViewById(R.id.clipboard_items_container)
         emptyLabel = rootView.findViewById(R.id.clipboard_empty_label)
@@ -74,6 +105,11 @@ class ClipboardController(
             prefs.clearClipboardHistory()
             refreshPanel()
         }
+
+        try {
+            val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+            cm?.addPrimaryClipChangedListener(clipListener)
+        } catch (_: Exception) {}
     }
 
     // -------------------------------------------------------------------------
@@ -83,84 +119,214 @@ class ClipboardController(
     /**
      * Update the pill display based on current state:
      *  - If there is a text selection: show "Copy"
+     *  - Else if clipboard has image: show thumbnail + "Ảnh"
      *  - Else if clipboard has text: show preview
-     *  - Else: show "Clipboard"
+     *  - Else: show "Clipboard" (default empty state)
      */
     fun refreshPill() {
         val pillText = pillTextView ?: return
+        val pillImg = pillImageView
+
         when {
             !currentSelectionText.isNullOrEmpty() -> {
+                pillImg?.visibility = View.GONE
                 pillText.text = "Copy"
             }
+            systemClipImageUri != null -> {
+                pillImg?.visibility = View.VISIBLE
+                if (systemClipImageThumbnail != null && !systemClipImageThumbnail!!.isRecycled) {
+                    pillImg?.setImageBitmap(systemClipImageThumbnail)
+                } else {
+                    pillImg?.setImageResource(R.drawable.ic_image)
+                }
+                pillText.text = "Ảnh"
+            }
             systemClipPreview != null -> {
+                pillImg?.visibility = View.GONE
                 val preview = systemClipPreview!!.take(30).replace('\n', ' ')
                 pillText.text = if (systemClipPreview!!.length > 30) "$preview…" else preview
             }
             else -> {
+                pillImg?.visibility = View.GONE
                 pillText.text = "Clipboard"
             }
         }
     }
 
     /**
-     * Attempt to read the current system clipboard text.
-     * This may return null on Android 10+ if the IME is not in foreground.
+     * Attempt to read the current system clipboard.
+     * This evaluates whether the clip has already been consumed and skips it if so.
      * We NEVER save this automatically — only used for the pill preview.
      */
     fun refreshPillFromSystemClipboard() {
         if (!prefs.isClipboardPreviewEnabled) {
-            systemClipPreview = null
+            clearSystemClipPreview()
             refreshPill()
             return
         }
+
         try {
             val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
             val clip = cm?.primaryClip
             if (clip != null && clip.itemCount > 0) {
                 val desc = clip.description
-                // Skip sensitive content (password managers flag this)
+
+                // Skip sensitive content (passwords, sensitive fields)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                     if (desc.extras?.getBoolean("android.content.extra.IS_SENSITIVE", false) == true) {
-                        systemClipPreview = null
+                        clearSystemClipPreview()
                         refreshPill()
                         return
                     }
                 }
-                val text = clip.getItemAt(0)?.coerceToText(context)?.toString()
-                if (!text.isNullOrBlank()) {
-                    systemClipPreview = text
+
+                val timestamp = desc.timestamp
+                val item = clip.getItemAt(0)
+                val itemUri = item?.uri
+                val isImage = itemUri != null && (desc.hasMimeType("image/*") ||
+                    context.contentResolver.getType(itemUri)?.startsWith("image/") == true)
+
+                if (isImage) {
+                    val uri = itemUri!!
+                    val hash = uri.toString().hashCode()
+                    if (isClipConsumed(timestamp, hash, currentClipSequence)) {
+                        clearSystemClipPreview()
+                    } else {
+                        clearSystemClipPreview()
+                        activeClipTimestamp = timestamp
+                        activeClipHash = hash
+                        activeClipSequence = currentClipSequence
+                        systemClipImageUri = uri
+                        systemClipImageDescription = desc
+                        systemClipImageThumbnail = loadThumbnail(uri)
+                    }
                 } else {
-                    systemClipPreview = null
+                    val text = item?.coerceToText(context)?.toString()
+                    if (!text.isNullOrBlank()) {
+                        val hash = text.hashCode()
+                        if (isClipConsumed(timestamp, hash, currentClipSequence)) {
+                            clearSystemClipPreview()
+                        } else {
+                            clearSystemClipPreview()
+                            activeClipTimestamp = timestamp
+                            activeClipHash = hash
+                            activeClipSequence = currentClipSequence
+                            systemClipPreview = text
+                        }
+                    } else {
+                        clearSystemClipPreview()
+                    }
                 }
             } else {
-                systemClipPreview = null
+                clearSystemClipPreview()
             }
-        } catch (e: SecurityException) {
-            Log.d("ClipboardController", "Cannot read clipboard: ${e.message}")
-            systemClipPreview = null
-        } catch (e: Exception) {
-            systemClipPreview = null
+        } catch (_: SecurityException) {
+            clearSystemClipPreview()
+        } catch (_: Exception) {
+            clearSystemClipPreview()
         }
+
         refreshPill()
+    }
+
+    private fun isClipConsumed(timestamp: Long, hash: Int, sequence: Long): Boolean {
+        // If Android provides a valid timestamp (> 0)
+        if (timestamp > 0L) {
+            val consumedTs = if (consumedClipTimestamp > 0L) consumedClipTimestamp else prefs.consumedClipTimestamp
+            return timestamp == consumedTs
+        }
+
+        // Fallback by sequence (each clip event increments sequence)
+        if (sequence > 0L) {
+            return sequence == consumedClipSequence
+        }
+
+        // Fallback by content hash when neither timestamp nor sequence is available
+        val consumedHash = if (consumedClipContentHash != 0) consumedClipContentHash else prefs.consumedClipContentHash
+        return hash != 0 && hash == consumedHash && isCurrentDismissed
+    }
+
+    private fun markCurrentClipConsumed() {
+        consumedClipTimestamp = activeClipTimestamp
+        consumedClipContentHash = activeClipHash
+        consumedClipSequence = activeClipSequence
+        isCurrentDismissed = true
+
+        if (activeClipTimestamp > 0L) {
+            prefs.consumedClipTimestamp = activeClipTimestamp
+        }
+        if (activeClipHash != 0) {
+            prefs.consumedClipContentHash = activeClipHash
+        }
+    }
+
+    private fun clearSystemClipPreview() {
+        systemClipPreview = null
+        systemClipImageUri = null
+        systemClipImageDescription = null
+        systemClipImageThumbnail?.let {
+            if (!it.isRecycled) {
+                it.recycle()
+            }
+        }
+        systemClipImageThumbnail = null
+    }
+
+    private fun loadThumbnail(uri: Uri): Bitmap? {
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                context.contentResolver.loadThumbnail(uri, Size(48, 48), null)
+            } else {
+                null
+            }
+        } catch (_: Exception) {
+            null
+        }
     }
 
     private fun onPillClicked() {
         when {
             !currentSelectionText.isNullOrEmpty() -> {
                 // Copy selection
-                copyToSystemClipboard(currentSelectionText!!)
-                prefs.addClipboardItem(currentSelectionText!!)
-                systemClipPreview = currentSelectionText
+                val selText = currentSelectionText!!
+                copyToSystemClipboard(selText)
+                prefs.addClipboardItem(selText)
+                currentSelectionText = null
+                onSelectionDismissed?.invoke()
+
+                // Display newly copied text preview
+                clearSystemClipPreview()
+                systemClipPreview = selText
+                activeClipTimestamp = System.currentTimeMillis()
+                activeClipHash = selText.hashCode()
+                activeClipSequence = ++currentClipSequence
                 refreshPill()
             }
+            systemClipImageUri != null && systemClipImageDescription != null -> {
+                // Paste image
+                val uri = systemClipImageUri!!
+                val desc = systemClipImageDescription!!
+                val success = onPasteImage(uri, desc)
+                if (success) {
+                    markCurrentClipConsumed()
+                    clearSystemClipPreview()
+                    refreshPill()
+                }
+            }
             systemClipPreview != null -> {
-                // Paste the preview
+                // Paste text
                 val text = systemClipPreview!!
-                prefs.addClipboardItem(text)
-                onPasteText(text)
+                val success = onPasteText(text)
+                if (success) {
+                    // Save to Deshort history (Clipboard Manager)
+                    prefs.addClipboardItem(text)
+                    markCurrentClipConsumed()
+                    clearSystemClipPreview()
+                    refreshPill()
+                }
             }
             else -> {
-                // Open clipboard panel
+                // Default empty state: open Clipboard Manager
                 showPanel()
             }
         }
@@ -278,7 +444,7 @@ class ClipboardController(
     private fun resolveAttrColor(colorResId: Int): Int {
         return try {
             context.getColor(colorResId)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             0xFFFFFFFF.toInt()
         }
     }
@@ -287,25 +453,40 @@ class ClipboardController(
     // Public helpers
     // -------------------------------------------------------------------------
 
-    /**
-     * Call when the user explicitly copies text through Deshort (e.g. using the Copy button
-     * in selection mode). This is the ONLY path that adds to clipboard history.
-     */
     fun onUserCopiedText(text: String) {
         if (text.isBlank()) return
         copyToSystemClipboard(text)
         prefs.addClipboardItem(text)
+        clearSystemClipPreview()
         systemClipPreview = text
+        activeClipTimestamp = System.currentTimeMillis()
+        activeClipHash = text.hashCode()
+        activeClipSequence = ++currentClipSequence
         refreshPill()
     }
 
-    /** Called by IME when selection changes */
     fun onSelectionChanged(selStart: Int, selEnd: Int) {
-        // selectionText is provided by CursorSelectionController
+        // Selection text is fed by CursorSelectionController
     }
 
     fun reset() {
         currentSelectionText = null
         refreshPill()
+    }
+
+    fun onDestroy() {
+        try {
+            val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+            cm?.removePrimaryClipChangedListener(clipListener)
+        } catch (_: Exception) {}
+        clearSystemClipPreview()
+    }
+
+    companion object {
+        private var consumedClipTimestamp: Long = 0L
+        private var consumedClipContentHash: Int = 0
+        private var consumedClipSequence: Long = 0L
+        private var isCurrentDismissed: Boolean = false
+        private var currentClipSequence: Long = 1L
     }
 }
